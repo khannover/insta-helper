@@ -23,6 +23,9 @@ class GenerateRequest(BaseModel):
 
 @router.post("/image")
 async def generate_image(req: GenerateRequest):
+    if not req.prompt.strip():
+        raise HTTPException(400, "Prompt cannot be empty")
+
     params = {
         "width": req.width,
         "height": req.height,
@@ -33,19 +36,17 @@ async def generate_image(req: GenerateRequest):
         params["seed"] = req.seed
 
     url = POLLINATIONS_URL.format(prompt=req.prompt)
-
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.get(url, params=params, follow_redirects=True)
-        if resp.status_code != 200:
-            raise HTTPException(502, "Pollinations API error")
-        content_type = resp.headers.get("content-type", "image/jpeg")
-
-    ext = ".jpg" if "jpeg" in content_type else ".png"
-    filename = f"{uuid.uuid4().hex}{ext}"
+    filename = f"{uuid.uuid4().hex}.jpg"
     dest = UPLOAD_DIR / filename
 
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=120) as client:
         async with client.stream("GET", url, params=params, follow_redirects=True) as r:
+            if r.status_code != 200:
+                raise HTTPException(502, f"Pollinations API returned {r.status_code}")
+            content_type = r.headers.get("content-type", "image/jpeg")
+            ext = ".png" if "png" in content_type else ".jpg"
+            filename = f"{uuid.uuid4().hex}{ext}"
+            dest = UPLOAD_DIR / filename
             async with aiofiles.open(dest, "wb") as f:
                 async for chunk in r.aiter_bytes():
                     await f.write(chunk)
@@ -55,4 +56,19 @@ async def generate_image(req: GenerateRequest):
         "type": "image",
         "url": f"/api/media/file/{filename}",
         "prompt": req.prompt
+    }
+
+
+@router.get("/models")
+async def list_models():
+    return {
+        "models": [
+            "flux",
+            "turbo",
+            "flux-realism",
+            "flux-anime",
+            "flux-3d",
+            "flux-pro",
+            "gptimage",
+        ]
     }
