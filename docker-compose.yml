@@ -1,0 +1,29 @@
+services:
+  backend:
+    build: ./backend
+    container_name: insta-helper-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./data/insta_helper.db
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/uploads:/app/uploads
+    networks:
+      - insta-net
+
+  frontend:
+    image: nginx:alpine
+    container_name: insta-helper-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    networks:
+      - insta-net
+
+networks:
+  insta-net:
+    driver: bridge
