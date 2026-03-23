@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>insta-helper</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <h1 class="logo">insta<span>helper</span></h1>
+    <div class="api-url-row">
+      <input type="text" id="apiUrl" placeholder="http://localhost:8000" />
+      <button onclick="saveApiUrl()">Save</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- LEFT: Media Source -->
+    <section class="panel" id="sourcePanel">
+      <h2>01 / Source</h2>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="upload">Upload</button>
+        <button class="tab" data-tab="generate">AI Generate</button>
+      </div>
+
+      <!-- Upload Tab -->
+      <div class="tab-content active" id="tab-upload">
+        <div class="dropzone" id="dropzone">
+          <p>drop image or video here</p>
+          <p class="hint">jpg, png, mp4, mov</p>
+        </div>
+        <input type="file" id="fileInput" accept="image/*,video/*" hidden>
+      </div>
+
+      <!-- AI Generate Tab -->
+      <div class="tab-content" id="tab-generate">
+        <label>Prompt</label>
+        <textarea id="genPrompt" rows="4" placeholder="neon cityscape, anime girl, glitch art..."></textarea>
+        <div class="row">
+          <div>
+            <label>Width</label>
+            <input type="number" id="genWidth" value="1024" min="256" max="2048" step="64">
+          </div>
+          <div>
+            <label>Height</label>
+            <input type="number" id="genHeight" value="1024" min="256" max="2048" step="64">
+          </div>
+        </div>
+        <label>Model</label>
+        <select id="genModel">
+          <option value="flux">flux</option>
+          <option value="turbo">turbo</option>
+          <option value="flux-realism">flux-realism</option>
+          <option value="flux-anime">flux-anime</option>
+          <option value="flux-3d">flux-3d</option>
+        </select>
+        <button class="btn-primary" onclick="generateImage()">Generate</button>
+      </div>
+
+      <!-- Preview -->
+      <div class="preview-box" id="previewBox">
+        <p class="placeholder-text">no media loaded</p>
+      </div>
+      <div class="source-info" id="sourceInfo"></div>
+    </section>
+
+    <!-- MIDDLE: Compose -->
+    <section class="panel" id="composePanel">
+      <h2>02 / Compose</h2>
+
+      <label>Text Overlay <span class="optional">(optional)</span></label>
+      <input type="text" id="overlayText" placeholder="your text here...">
+
+      <div class="row">
+        <div>
+          <label>X position</label>
+          <input type="range" id="textX" min="0" max="1" step="0.01" value="0.5" oninput="updatePreviewOverlay()">
+          <span id="textXVal">0.50</span>
+        </div>
+        <div>
+          <label>Y position</label>
+          <input type="range" id="textY" min="0" max="1" step="0.01" value="0.5" oninput="updatePreviewOverlay()">
+          <span id="textYVal">0.50</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Font size</label>
+          <input type="number" id="fontSize" value="72" min="12" max="300">
+        </div>
+        <div>
+          <label>Color</label>
+          <input type="color" id="textColor" value="#ffffff">
+        </div>
+      </div>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="glitchToggle" checked>
+        Glitch / Chromatic Aberration
+      </label>
+
+      <hr>
+
+      <label>Audio <span class="optional">(optional)</span></label>
+      <div class="dropzone small" id="audioDropzone">
+        <p>drop audio file</p>
+        <p class="hint">mp3, wav, flac, m4a</p>
+      </div>
+      <input type="file" id="audioInput" accept="audio/*" hidden>
+
+      <div class="row" id="audioTimeRow" style="display:none">
+        <div>
+          <label>Start (s)</label>
+          <input type="number" id="audioStart" value="0" min="0" step="0.1">
+        </div>
+        <div>
+          <label>End (s)</label>
+          <input type="number" id="audioEnd" value="" placeholder="auto" min="0" step="0.1">
+        </div>
+      </div>
+      <div class="audio-info" id="audioInfo"></div>
+
+      <hr>
+
+      <label>Aspect Ratio</label>
+      <div class="aspect-btns">
+        <button class="aspect-btn active" data-aspect="9:16">9:16</button>
+        <button class="aspect-btn" data-aspect="1:1">1:1</button>
+        <button class="aspect-btn" data-aspect="3:4">3:4</button>
+        <button class="aspect-btn" data-aspect="16:9">16:9</button>
+      </div>
+
+      <!-- Canvas preview -->
+      <div class="canvas-wrap">
+        <canvas id="previewCanvas"></canvas>
+        <div class="overlay-text-preview" id="overlayPreview"></div>
+      </div>
+    </section>
+
+    <!-- RIGHT: Export -->
+    <section class="panel" id="exportPanel">
+      <h2>03 / Export</h2>
+
+      <button class="btn-primary big" onclick="renderExport()">Render &amp; Download</button>
+
+      <div class="status-box" id="statusBox"></div>
+
+      <div class="result-box" id="resultBox" style="display:none">
+        <video id="resultVideo" controls style="display:none;width:100%"></video>
+        <img id="resultImage" style="display:none;width:100%">
+        <a id="downloadLink" class="btn-primary" download>Download</a>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
