@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>insta-helper</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 
@@ -58,14 +58,52 @@
           <option value="flux-anime">flux-anime</option>
           <option value="flux-3d">flux-3d</option>
         </select>
-        <button class="btn-primary" onclick="generateImage()">Generate</button>
+        <div class="row">
+          <div>
+            <label>Seed <span class="optional">(optional)</span></label>
+            <input type="number" id="genSeed" min="0" step="1" placeholder="random / provider default">
+          </div>
+          <div class="generate-actions generate-actions-inline">
+            <button class="btn-secondary" type="button" onclick="rerollImage()">Re-roll</button>
+          </div>
+        </div>
+        <div id="cropModeContainer" style="display: none;">
+          <label style="margin-top: 0.5rem;">Crop Alignment (Legacy)</label>
+          <select id="cropMode" onchange="state.cropMode=this.value; drawCanvas();">
+            <option value="center">Center</option>
+            <option value="top">Top / Left</option>
+            <option value="bottom">Bottom / Right</option>
+          </select>
+        </div>
+        <button class="btn-primary" onclick="generateImage()" style="margin-top: 0.5rem;">Generate</button>
       </div>
 
       <!-- Preview -->
-      <div class="preview-box" id="previewBox">
-        <p class="placeholder-text">no media loaded</p>
+      <div class="crop-area">
+        <label>Adjust Crop</label>
+        <div id="cropContainer">
+          <img id="cropImg" src="" alt="Source">
+          <div id="cropOverlay"></div>
+          <div id="cropBox">
+            <div class="crop-handle handle-tl" data-handle="tl"></div>
+            <div class="crop-handle handle-tr" data-handle="tr"></div>
+            <div class="crop-handle handle-bl" data-handle="bl"></div>
+            <div class="crop-handle handle-br" data-handle="br"></div>
+            <div class="crop-handle handle-t" data-handle="t"></div>
+            <div class="crop-handle handle-b" data-handle="b"></div>
+            <div class="crop-handle handle-l" data-handle="l"></div>
+            <div class="crop-handle handle-r" data-handle="r"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-box" id="mediaPreview" style="display: none;">
+        <p class="placeholder-text">Selected media preview</p>
       </div>
       <div class="source-info" id="sourceInfo"></div>
+      <div class="source-actions" id="sourceActions" style="display:none">
+        <a id="sourceDownloadLink" class="btn-secondary" download>Download Generated Image</a>
+      </div>
     </section>
 
     <!-- MIDDLE: Compose -->
@@ -73,7 +111,7 @@
       <h2>02 / Compose</h2>
 
       <label>Text Overlay <span class="optional">(optional)</span></label>
-      <input type="text" id="overlayText" placeholder="your text here...">
+      <textarea id="overlayText" rows="3" placeholder="your text here..."></textarea>
 
       <div class="row">
         <div>
@@ -104,6 +142,30 @@
         Glitch / Chromatic Aberration
       </label>
 
+      <label style="margin-top: 0.5rem;">Video FX <span class="optional">(select multiple)</span></label>
+      <div class="fx-btns">
+        <button class="fx-btn active" data-fx="none">None</button>
+        <button class="fx-btn" data-fx="grayscale">Grayscale</button>
+        <button class="fx-btn" data-fx="sepia">Sepia</button>
+        <button class="fx-btn" data-fx="blur">Blur</button>
+        <button class="fx-btn" data-fx="invert">Invert</button>
+        <button class="fx-btn" data-fx="vignette">Vignette</button>
+      </div>
+
+      <label style="margin-top: 0.5rem;">Animation FX <span class="optional">(select multiple)</span></label>
+      <div class="anim-fx-btns">
+        <button class="anim-fx-btn active" data-anim="none">None</button>
+        <button class="anim-fx-btn" data-anim="ken_burns_in">Zoom In</button>
+        <button class="anim-fx-btn" data-anim="ken_burns_out">Zoom Out</button>
+        <button class="anim-fx-btn" data-anim="ken_burns_constant">KB Constant</button>
+        <button class="anim-fx-btn" data-anim="glitch_subtle">Subtle Glitch</button>
+        <button class="anim-fx-btn" data-anim="glitch_heavy">Heavy Glitch</button>
+        <button class="anim-fx-btn" data-anim="glitch_pulse">Glitch Pulse</button>
+        <button class="anim-fx-btn" data-anim="rgb_split">RGB Split</button>
+        <button class="anim-fx-btn" data-anim="shake">Shake</button>
+      </div>
+      <p class="hint" style="margin-top: 4px; opacity: 0.6;">* Note: Zoom effects are sequential.</p>
+
       <hr>
 
       <label>Audio <span class="optional">(optional)</span></label>
@@ -129,10 +191,11 @@
 
       <label>Aspect Ratio</label>
       <div class="aspect-btns">
-        <button class="aspect-btn active" data-aspect="9:16">9:16</button>
-        <button class="aspect-btn" data-aspect="1:1">1:1</button>
-        <button class="aspect-btn" data-aspect="3:4">3:4</button>
-        <button class="aspect-btn" data-aspect="16:9">16:9</button>
+        <button class="aspect-btn active" data-ratio="9:16">9:16</button>
+        <button class="aspect-btn" data-ratio="1:1">1:1</button>
+        <button class="aspect-btn" data-ratio="3:4">3:4</button>
+        <button class="aspect-btn" data-ratio="16:9">16:9</button>
+        <button class="aspect-btn" data-ratio="custom">Custom</button>
       </div>
 
       <!-- Canvas preview -->
@@ -145,6 +208,27 @@
     <!-- RIGHT: Export -->
     <section class="panel" id="exportPanel">
       <h2>03 / Export</h2>
+
+      <div class="row export-options-row">
+        <div>
+          <label>Format</label>
+          <select id="outputFormat">
+            <option value="auto">Auto</option>
+            <option value="mp4">MP4 Video</option>
+            <option value="gif">GIF</option>
+            <option value="png">PNG Still</option>
+          </select>
+        </div>
+        <div>
+          <label>Codec</label>
+          <select id="videoCodec">
+            <option value="h264">H.264</option>
+            <option value="h265">H.265 / HEVC</option>
+          </select>
+        </div>
+      </div>
+
+      <p class="hint export-hint" id="exportHint">Auto uses PNG for still images and MP4 for animated or audio exports.</p>
 
       <button class="btn-primary big" onclick="renderExport()">Render &amp; Download</button>
 
@@ -159,6 +243,6 @@
   </main>
 </div>
 
-<script src="app.js"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>

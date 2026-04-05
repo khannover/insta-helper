@@ -3,10 +3,9 @@ import aiofiles
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
+from app_paths import UPLOAD_DIR
 
 router = APIRouter()
-UPLOAD_DIR = Path("/app/uploads")
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_IMAGE = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 ALLOWED_VIDEO = {"video/mp4", "video/quicktime", "video/webm"}

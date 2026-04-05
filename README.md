@@ -36,6 +36,39 @@ docker compose up -d
 - Backend API: `http://localhost:8000`
 - API Docs: `http://localhost:8000/docs`
 
+## Native Windows Build
+
+The repository now supports a single-process native packaging path for Windows. In native mode, FastAPI serves both the API and the static frontend, and the packaged launcher opens the app in your browser.
+
+What changed for native packaging:
+
+- backend/frontend can run from one Python process
+- uploads and app data resolve to a writable app home instead of `/app/...`
+- ffmpeg is resolved from `INSTA_HELPER_FFMPEG`, bundled `bin/ffmpeg.exe`, or your `PATH`
+- fonts are resolved from `INSTA_HELPER_FONT`, bundled assets, or common system font locations
+
+Build prerequisites on Windows:
+
+- Python 3.12+
+- FFmpeg available on `PATH` or copied to `bin/ffmpeg.exe`
+- PyInstaller
+
+Build steps:
+
+```powershell
+python -m pip install -r backend/requirements.txt
+python -m pip install pyinstaller
+./build-native.ps1
+```
+
+The resulting executable is created under `dist/insta-helper.exe`.
+
+Notes:
+
+- AI image generation is still online-only because it calls Pollinations.ai
+- The native launcher uses `http://127.0.0.1:8000` by default
+- You can override writable storage with `INSTA_HELPER_HOME`
+
 ## Nginx Proxy Manager
 
 Point your subdomain (e.g. `insta.yourdomain.de`) to `localhost:3000` for the UI and `localhost:8000` for the API (or use a single subdomain and proxy-path both).

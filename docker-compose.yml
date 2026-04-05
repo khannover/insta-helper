@@ -8,6 +8,8 @@ services:
     volumes:
       - uploads:/app/uploads
       - ./backend/data:/app/data
+    environment:
+      - POLLINATIONS_API_KEY=${POLLINATIONS_API_KEY:-}
     networks:
       - insta-net
     healthcheck:

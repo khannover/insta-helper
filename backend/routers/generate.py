@@ -1,15 +1,18 @@
+import os
 import uuid
 import httpx
 import aiofiles
+from urllib.parse import quote
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from app_paths import UPLOAD_DIR
 
 router = APIRouter()
-UPLOAD_DIR = Path("/app/uploads")
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-POLLINATIONS_URL = "https://image.pollinations.ai/prompt/{prompt}"
+POLLINATIONS_URL_FREE = "https://image.pollinations.ai/prompt/{prompt}"
+POLLINATIONS_URL_AUTH = "https://gen.pollinations.ai/image/{prompt}"
+POLLINATIONS_API_KEY = os.getenv("POLLINATIONS_API_KEY")
 
 
 class GenerateRequest(BaseModel):
@@ -35,12 +38,23 @@ async def generate_image(req: GenerateRequest):
     if req.seed is not None:
         params["seed"] = req.seed
 
-    url = POLLINATIONS_URL.format(prompt=req.prompt)
+    headers = {}
+    if POLLINATIONS_API_KEY:
+        headers["Authorization"] = f"Bearer {POLLINATIONS_API_KEY}"
+        url_base = POLLINATIONS_URL_AUTH
+        # Adding key to params as a fallback/alternative for some endpoints
+        params["key"] = POLLINATIONS_API_KEY
+    else:
+        url_base = POLLINATIONS_URL_FREE
+
+    url = url_base.format(prompt=quote(req.prompt))
     filename = f"{uuid.uuid4().hex}.jpg"
     dest = UPLOAD_DIR / filename
 
     async with httpx.AsyncClient(timeout=120) as client:
-        async with client.stream("GET", url, params=params, follow_redirects=True) as r:
+        async with client.stream("GET", url, params=params, headers=headers, follow_redirects=True) as r:
+            if r.status_code == 403:
+                raise HTTPException(403, "Pollinations API: 403 Forbidden. Check your API key balance and permissions at enter.pollinations.ai")
             if r.status_code != 200:
                 raise HTTPException(502, f"Pollinations API returned {r.status_code}")
             content_type = r.headers.get("content-type", "image/jpeg")
@@ -55,7 +69,9 @@ async def generate_image(req: GenerateRequest):
         "id": filename,
         "type": "image",
         "url": f"/api/media/file/{filename}",
-        "prompt": req.prompt
+        "download": f"/api/export/download/{filename}",
+        "prompt": req.prompt,
+        "seed": req.seed,
     }
 
 
