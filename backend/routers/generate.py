@@ -4,9 +4,10 @@ import aiofiles
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from config import settings
 
 router = APIRouter()
-UPLOAD_DIR = Path("/app/uploads")
+UPLOAD_DIR = Path(settings.upload_dir)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 POLLINATIONS_URL = "https://image.pollinations.ai/prompt/{prompt}"

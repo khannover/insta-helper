@@ -3,9 +3,10 @@ import aiofiles
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
+from config import settings
 
 router = APIRouter()
-UPLOAD_DIR = Path("/app/uploads")
+UPLOAD_DIR = Path(settings.upload_dir)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_IMAGE = {"image/jpeg", "image/png", "image/webp", "image/gif"}
@@ -22,8 +23,13 @@ async def upload_media(file: UploadFile = File(...)):
     filename = f"{uuid.uuid4().hex}{ext}"
     dest = UPLOAD_DIR / filename
 
+    total = 0
     async with aiofiles.open(dest, "wb") as f:
         while chunk := await file.read(1024 * 1024):
+            total += len(chunk)
+            if total > settings.max_upload_bytes:
+                dest.unlink(missing_ok=True)
+                raise HTTPException(413, f"File exceeds maximum allowed size of {settings.max_upload_bytes} bytes")
             await f.write(chunk)
 
     media_type = "image" if file.content_type in ALLOWED_IMAGE else \
