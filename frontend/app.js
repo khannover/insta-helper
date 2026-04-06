@@ -30,7 +30,7 @@ document.querySelectorAll('.aspect-btn').forEach(btn => {
   });
 });
 
-// Sliders
+// Sliders — update the value shown inside each label
 ['textX','textY'].forEach(id => {
   document.getElementById(id).addEventListener('input', e => {
     document.getElementById(id + 'Val').textContent = parseFloat(e.target.value).toFixed(2);

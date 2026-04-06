@@ -1,12 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from config import settings
 from routers import media, export, generate
 
 app = FastAPI(title="insta-helper", version="1.0.0")
 
+cors_origins = [o.strip() for o in settings.cors_origins.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

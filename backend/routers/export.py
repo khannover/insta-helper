@@ -7,9 +7,10 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import random
+from config import settings
 
 router = APIRouter()
-UPLOAD_DIR = Path("/app/uploads")
+UPLOAD_DIR = Path(settings.upload_dir)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ASPECT_RATIOS = {
