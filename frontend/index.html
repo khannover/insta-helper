@@ -11,10 +11,6 @@
 <div class="app">
   <header>
     <h1 class="logo">insta<span>helper</span></h1>
-    <div class="api-url-row">
-      <input type="text" id="apiUrl" placeholder="http://localhost:8000" />
-      <button onclick="saveApiUrl()">Save</button>
-    </div>
   </header>
 
   <main>
@@ -97,7 +93,7 @@
         </div>
       </div>
 
-      <div class="preview-box" id="mediaPreview" style="display: none;">
+      <div class="preview-box" id="mediaPreview" style="display: none; position: relative;">
         <p class="placeholder-text">Selected media preview</p>
       </div>
       <div class="source-info" id="sourceInfo"></div>
@@ -198,11 +194,8 @@
         <button class="aspect-btn" data-ratio="custom">Custom</button>
       </div>
 
-      <!-- Canvas preview -->
-      <div class="canvas-wrap">
-        <canvas id="previewCanvas"></canvas>
-        <div class="overlay-text-preview" id="overlayPreview"></div>
-      </div>
+      <!-- Canvas preview removed, overlay element moved elsewhere -->
+      <div class="overlay-text-preview" id="overlayPreview" style="display:none; pointer-events:none;"></div>
     </section>
 
     <!-- RIGHT: Export -->

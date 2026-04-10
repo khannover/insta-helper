@@ -1,20 +1,6 @@
 // ---- State ----
-function defaultApiUrl() {
-  const saved = localStorage.getItem('ih_api');
-  if (saved) return saved;
-
-  if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-    if (window.location.port === '3000') {
-      return `${window.location.protocol}//${window.location.hostname}:8000`;
-    }
-    return window.location.origin;
-  }
-
-  return 'http://localhost:8000';
-}
-
 let state = {
-  apiUrl: defaultApiUrl(),
+  apiUrl: '',
   mediaId: null,
   mediaType: null,
   audioId: null,
@@ -59,14 +45,14 @@ class CropManager {
 
     let w, h;
     if (ratioStr === 'custom') {
-      w = cw * 0.8; h = ch * 0.8;
+      w = cw; h = ch;
     } else {
       const parts = ratioStr.split(':');
       const r = parts[0] / parts[1];
       if (cw / ch > r) {
-        h = ch * 0.8; w = h * r;
+        h = ch; w = h * r;
       } else {
-        w = cw * 0.8; h = w / r;
+        w = cw; h = w / r;
       }
     }
     this.setBoxPos((cw - w) / 2, (ch - h) / 2, w, h);
@@ -173,7 +159,6 @@ class CropManager {
 
 const cropManager = new CropManager();
 
-document.getElementById('apiUrl').value = state.apiUrl;
 document.getElementById('outputFormat').value = state.outputFormat;
 document.getElementById('videoCodec').value = state.videoCodec;
 
@@ -272,9 +257,7 @@ document.querySelectorAll('.anim-fx-btn').forEach(btn => {
 });
 
 function saveApiUrl() {
-  state.apiUrl = document.getElementById('apiUrl').value.trim().replace(/\/$/,'');
-  localStorage.setItem('ih_api', state.apiUrl);
-  setStatus('API URL saved.','ok');
+  // Removed
 }
 
 function updateSourceActions(data = null) {
@@ -408,41 +391,6 @@ async function uploadAudio(file) {
 
 // Canvas
 function drawCanvas() {
-  const canvas = document.getElementById('previewCanvas');
-  const ctx = canvas.getContext('2d');
-  const [aw,ah] = aspectDims(state.aspect);
-  const scale = 380 / Math.max(aw,ah);
-  canvas.width = aw*scale; canvas.height = ah*scale;
-  ctx.fillStyle = '#111'; ctx.fillRect(0,0,canvas.width,canvas.height);
-  const img = document.getElementById('cropImg');
-  if (img && img.complete && state.mediaType==='image') {
-    const ir = img.naturalWidth/img.naturalHeight, cr = canvas.width/canvas.height;
-    let sx=0,sy=0,sw=img.naturalWidth,sh=img.naturalHeight;
-    
-    if (state.cropRect) {
-      const [x1, y1, x2, y2] = state.cropRect;
-      sx = x1 * img.naturalWidth;
-      sy = y1 * img.naturalHeight;
-      sw = (x2 - x1) * img.naturalWidth;
-      sh = (y2 - y1) * img.naturalHeight;
-    } else {
-      if (ir>cr) { 
-        sw=img.naturalHeight*cr; 
-        if (state.cropMode === 'top') sx = 0;
-        else if (state.cropMode === 'bottom') sx = img.naturalWidth - sw;
-        else sx=(img.naturalWidth-sw)/2; 
-      }
-      else { 
-        sh=img.naturalWidth/cr; 
-        if (state.cropMode === 'top') sy = 0;
-        else if (state.cropMode === 'bottom') sy = img.naturalHeight - sh;
-        else sy=(img.naturalHeight-sh)/2; 
-      }
-    }
-    ctx.drawImage(img,sx,sy,sw,sh,0,0,canvas.width,canvas.height);
-  }
-  
-  // Combined CSS filter preview
   let filterStr = '';
   if (state.fx.includes('grayscale')) filterStr += 'grayscale(100%) ';
   if (state.fx.includes('sepia')) filterStr += 'sepia(100%) ';
@@ -450,31 +398,55 @@ function drawCanvas() {
   if (state.fx.includes('invert')) filterStr += 'invert(100%) ';
   if (state.fx.includes('vignette')) filterStr += 'contrast(1.1) brightness(0.9) ';
   
-  canvas.style.filter = filterStr || 'none';
+  const img = document.getElementById('cropImg');
+  if (img) img.style.filter = filterStr || 'none';
+  
+  const vid = document.querySelector('#mediaPreview video');
+  if (vid) vid.style.filter = filterStr || 'none';
 
   updatePreviewOverlay();
 }
 
 function updatePreviewOverlay() {
   const el = document.getElementById('overlayPreview');
-  const canvas = document.getElementById('previewCanvas');
   const text = document.getElementById('overlayText').value;
-  if (!text) { el.textContent=''; return; }
+  
+  if (!text) { 
+    el.style.display = 'none'; 
+    el.textContent = ''; 
+    return; 
+  }
+
   const x = +document.getElementById('textX').value;
   const y = +document.getElementById('textY').value;
   const size = +document.getElementById('fontSize').value;
   const color = document.getElementById('textColor').value;
   const glitch = document.getElementById('glitchToggle').checked;
-  const cw = canvas.offsetWidth||canvas.width;
-  const ch = canvas.offsetHeight||canvas.height;
+
+  let container = document.getElementById('cropBox');
+  if (state.mediaType === 'video') {
+    container = document.querySelector('#mediaPreview video') || document.getElementById('mediaPreview');
+  }
+
+  if (!container || container.style.display === 'none') {
+    el.style.display = 'none';
+    return;
+  }
+
+  el.style.display = 'block';
+  container.appendChild(el);
+
+  const cw = container.offsetWidth || container.clientWidth;
+  const ch = container.offsetHeight || container.clientHeight;
+
   el.textContent = text;
   el.style.fontSize = Math.max(8, Math.round(size*(cw/1080)))+'px';
   el.style.color = color;
   el.style.textShadow = glitch ? '-4px 0 rgba(255,0,80,0.7),4px 0 rgba(0,255,220,0.7)' : 'none';
-  const rect = canvas.getBoundingClientRect();
-  const wrap = document.querySelector('.canvas-wrap').getBoundingClientRect();
-  el.style.left = (rect.left-wrap.left + x*cw)+'px';
-  el.style.top  = (rect.top -wrap.top  + y*ch)+'px';
+
+  el.style.position = 'absolute';
+  el.style.left = (x * 100) + '%';
+  el.style.top = (y * 100) + '%';
   el.style.transform = 'translate(-50%,-50%)';
 }
 
